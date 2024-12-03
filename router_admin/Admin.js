@@ -8,9 +8,14 @@ import { Image } from "react-native";
 import Statistics from "../admin/Statistics";
 import Routerapp from "./Routerapp";
 import Routerpro from "./Routerpro";
+import { useMyContextProvider } from "../index";
+
 const Tab = createBottomTabNavigator();
 
 const Admin = () => {
+  const [controller] = useMyContextProvider();
+  const { userLogin } = controller;
+
   return (
     <Tab.Navigator
       screenOptions={{
@@ -46,32 +51,37 @@ const Admin = () => {
         }}
       />
       
-      <Tab.Screen
-        name="Customers"
-        component={Customers}
-        options={{
-          title: "Khách hàng",
-          tabBarIcon: ({ color }) => (
-            <Image
-              source={require("../assets/customer.png")}
-              style={{ width: 20, height: 20, tintColor: color }}
-            />
-          ),
-        }}
-      />
-      <Tab.Screen
-        name="Statistics"
-        component={Statistics}
-        options={{
-          title: "Thống kê",
-          tabBarIcon: ({ color }) => (
-            <Image
-              source={require("../assets/statistics.png")}
-              style={{ width: 20, height: 20, tintColor: color }}
-            />
-          ),
-        }}
-      />
+      {userLogin.role !== 'user' && (
+        <>
+          <Tab.Screen
+            name="Customers"
+            component={Customers}
+            options={{
+              title: "Khách hàng",
+              tabBarIcon: ({ color }) => (
+                <Image
+                  source={require("../assets/customer.png")}
+                  style={{ width: 20, height: 20, tintColor: color }}
+                />
+              ),
+            }}
+          />
+          <Tab.Screen
+            name="Statistics"
+            component={Statistics}
+            options={{
+              title: "Thống kê",
+              tabBarIcon: ({ color }) => (
+                <Image
+                  source={require("../assets/statistics.png")}
+                  style={{ width: 20, height: 20, tintColor: color }}
+                />
+              ),
+            }}
+          />
+        </>
+      )}
+      
       <Tab.Screen
         name="Routerpro"
         component={Routerpro}

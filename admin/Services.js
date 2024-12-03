@@ -40,11 +40,12 @@ const Services = ({ navigation }) => {
 
     const renderItem = ({ item }) => (
         <TouchableOpacity 
-            onPress={() => handleAppointment(item)} 
-            style={styles.itemContainer}>
+            onPress={() => handleUpdate(item)} 
+            style={styles.itemContainer}
+        >
             <View style={styles.itemContent}>
                 <Image 
-                    source={{uri: item.image}}
+                    source={{ uri: item.image }}
                     style={styles.productImage}
                 />
                 <View style={styles.productInfo}>
@@ -60,127 +61,115 @@ const Services = ({ navigation }) => {
         </TouchableOpacity>
     );
     
-    const handleAppointment = (service) => {
+    const handleUpdate = (service) => {
         navigation.navigate("ServiceUpdate", { service });
     }
 
-    const handleUpdate = async (service) => {
-        try {
-            navigation.navigate("ServiceUpdate", { service });
-        } catch (error) {
-            console.error("Lỗi khi cập nhật sản phẩm:", error);
-        }
-    }
     
-
-
+    
     return (
-        
-            <FlatList
-                data={services}
-                renderItem={renderItem}
-                keyExtractor={item => item.id}
-                numColumns={2}
-                style={{height:300}}
-                columnWrapperStyle={{
-                    gap: 10,
-                    paddingHorizontal: 10,
-                }}
-                
-                ListHeaderComponent={
-                    <>
-                    <View style={{paddingLeft:20,paddingRight:20, alignItems: 'center', }} >
-                <PaperTextInput
-                    value={name}
-                    placeholder="Tìm kiếm"
-                    placeholderTextColor="#888"
-                    left={
-                        <PaperTextInput.Icon 
-                            icon={() => <Image 
-                                source={require('../assets/search.png')} 
-                                style={{ 
-                                    width: 20, 
-                                    height: 20,
-                                    tintColor: '#757575'
-                                }} 
-                            />} 
+        <FlatList
+            data={services}
+            renderItem={renderItem}
+            keyExtractor={item => item.id}
+            numColumns={2}
+            style={{ height: 300 }}
+            columnWrapperStyle={{
+                gap: 10,
+                paddingHorizontal: 10,
+            }}
+            ListHeaderComponent={
+                <>
+                    <View style={{ paddingLeft: 20, paddingRight: 20, alignItems: 'center' }}>
+                        <PaperTextInput
+                            value={name}
+                            placeholder="Tìm kiếm"
+                            placeholderTextColor="#888"
+                            left={
+                                <PaperTextInput.Icon 
+                                    icon={() => <Image 
+                                        source={require('../assets/search.png')} 
+                                        style={{ 
+                                            width: 20, 
+                                            height: 20,
+                                            tintColor: '#757575'
+                                        }} 
+                                    />} 
+                                />
+                            }
+                            mode="outlined"
+                            style={{
+                                backgroundColor: 'white',
+                                marginHorizontal: 15,
+                                marginTop: 15,
+                            }}
+                            outlineStyle={{
+                                borderRadius: 25,
+                            }}
+                            onChangeText={(text) => {
+                                setName(text);
+                                const result = initialServices.filter(service => service.title.toLowerCase().includes(text.toLowerCase()));
+                                setServices(result);
+                            }}
+                            
                         />
-                    }
-                    mode="outlined"
-                    style={{
-                        backgroundColor: 'white',
-                        marginHorizontal: 15,
-                        marginTop: 15,
-                    }}
-                    outlineStyle={{
-                        borderRadius: 25,
-                    }}
-                    onChangeText={(text) => {
-                        setName(text);
-                        const result = initialServices.filter(service => service.title.toLowerCase().includes(text.toLowerCase()));
-                        setServices(result);
-                    }}
+                    </View>
+                    <View style={{alignItems: 'center', marginVertical: 20}}>
+                        <Image 
+                            source={require("../assets/logo.png")}
+                            style={{
+                                width: 150,
+                                height: 150,
+                                borderRadius: 75,
+                                marginBottom: 10
+                            }}
+                        />
+                    </View>
                     
-                />
-            </View>
-            <View style={{alignItems: 'center', marginVertical: 20}}>
-                <Image 
-                    source={require("../assets/logo.png")}
-                    style={{
-                        width: 150,
-                        height: 150,
-                        borderRadius: 75,
-                        marginBottom: 10
-                    }}
-                />
-            </View>
-            
-            <View style={{
-                flexDirection: "row",
-                alignItems: "center",
-                justifyContent: "space-between",
-                paddingHorizontal: 20,
-                marginBottom: 15,
-                backgroundColor: '#fff',
-                height: 60,
-                shadowColor: '#000',
-                shadowOffset: {width: 0, height: 2},
-                shadowOpacity: 0.1,
-                elevation: 3,
-            }}>
-                <Text style={{
-                    fontSize: 22,
-                    fontWeight: "bold",
-                    color: '#333'
-                }}>
-                    Danh sách sản phẩm
-                </Text>
-                <TouchableOpacity 
-                    onPress={() => navigation.navigate("AddNewService")}
-                    style={{
-                        backgroundColor: '#FF8C00',
-                        padding: 10,
-                        borderRadius: 25,
-                    }}
-                >
-                    <Image 
-                        source={require('../assets/add.png')} 
-                        style={{ width: 25, height: 25, tintColor: 'white' }} 
-                    />
-                </TouchableOpacity>
-            </View>
-            <View style={{paddingBottom:40}}></View>
-                    </>
-                }
-
-            />
-            
-        
-    )
+                    <View style={{
+                        flexDirection: "row",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        paddingHorizontal: 20,
+                        marginBottom: 15,
+                        backgroundColor: '#fff',
+                        height: 60,
+                        shadowColor: '#000',
+                        shadowOffset: {width: 0, height: 2},
+                        shadowOpacity: 0.1,
+                        elevation: 3,
+                    }}>
+                        <Text style={{
+                            fontSize: 22,
+                            fontWeight: "bold",
+                            color: '#333'
+                        }}>
+                            Danh sách sản phẩm
+                        </Text>
+                        <TouchableOpacity 
+                            onPress={() => navigation.navigate("AddNewService")}
+                            style={{
+                                backgroundColor: '#FF8C00',
+                                padding: 10,
+                                borderRadius: 25,
+                            }}
+                        >
+                            <Image 
+                                source={require('../assets/add.png')} 
+                                style={{ width: 25, height: 25, tintColor: 'white' }} 
+                            />
+                        </TouchableOpacity>
+                    </View>
+                    <View style={{paddingBottom:40}}></View>
+                </>
+            }
+        />
+    );
 }
 
 export default Services;
 const styles = StyleSheet.create({
+    
     inputContainerStyle:{
         color:'black',
         borderColor: "black", // Viền ngoài màu đen

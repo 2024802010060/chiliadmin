@@ -306,7 +306,9 @@ const Appointadmin = ({navigation}) => {
     return (
         <View style={{flex:1, backgroundColor:"white"}}>
             <CustomModal />
-            <Text style={{ padding: 15, fontSize: 25, fontWeight: "bold", backgroundColor:"orange" }}>Đơn hàng</Text>
+            <View style={styles.header}>
+                <Text style={styles.headerText}>Khách hàng</Text>
+            </View>
             
             <View style={styles.filterContainer}>
                 <TextInput
@@ -345,7 +347,19 @@ const Appointadmin = ({navigation}) => {
 }
 
 const styles = StyleSheet.create({
-    
+    header: {
+        padding: 20,
+        backgroundColor: '#FF9800',
+        elevation: 8,
+        borderBottomLeftRadius: 15,
+        borderBottomRightRadius: 15,
+    },
+    headerText: {
+        color: 'black',
+        fontSize: 26,
+        fontWeight: 'bold',
+        textAlign: 'center',
+    },
     webDateInput: {
         padding: 10,
         borderRadius: 5,

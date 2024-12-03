@@ -22,8 +22,8 @@ const Login = ({ navigation }) => {
     if (userLogin != null) {
       if (userLogin.role === "admin")
         navigation.navigate("Admin")
-      else if (userLogin.role === "customer")
-        navigation.navigate("Customer")
+      else if (userLogin.role === "user")
+        navigation.navigate("Admin")
     }
   }, [userLogin])
 
