@@ -46,7 +46,7 @@ const Login = ({ navigation }) => {
             setPassword('123456');
           }}
         >
-          Auto Fill Admin
+          
         </Button>
         <TextInput
           label="Email"

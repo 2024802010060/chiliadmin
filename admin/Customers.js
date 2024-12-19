@@ -16,7 +16,7 @@ const Customers = () => {
     const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 });
     const [searchQuery, setSearchQuery] = useState('');
 
-    const roles = ['admin', 'user', 'customer'];
+    const roles = ['user', 'customer'];
     
     useEffect(() => {
         try {

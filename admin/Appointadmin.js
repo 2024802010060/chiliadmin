@@ -89,6 +89,7 @@ const Appointadmin = ({navigation}) => {
     const [dateFilter, setDateFilter] = useState(new Date());
     const [showDatePicker, setShowDatePicker] = useState(false);
     const [isFilteringByDate, setIsFilteringByDate] = useState(true);
+    const [filterCompleted, setFilterCompleted] = useState(null);
 
     useEffect(() => {
         const appointmentsRef = collection(firestore, 'Appointments');
@@ -237,9 +238,14 @@ const Appointadmin = ({navigation}) => {
                 
                 <View style={styles.statusContainer}>
                     <View style={[styles.statusBadge, { marginRight: 8 },
-                        {backgroundColor: item.state === 'new' ? '#4CAF50' : '#FF9800'}]}>
+                        {backgroundColor: 
+                            item.state === 'new' ? '#F44336' :  // Red for 'Chờ xác nhận'
+                            item.state === 'delivery' ? '#FF9800' :  // Orange for 'Chờ giao'
+                            '#4CAF50'  // Green for 'Đã hoàn tất'
+                        }]}>
                         <Text style={styles.statusText}>
-                            {item.state === 'new' ? 'Chờ xác nhận' : 'Chờ giao'}
+                            {item.state === 'new' ? 'Chờ xác nhận' : 
+                             item.state === 'delivery' ? 'Chờ giao' : 'Đã hoàn tất'}
                         </Text>
                     </View>
                     <View style={[styles.statusBadge,
@@ -262,7 +268,7 @@ const Appointadmin = ({navigation}) => {
 
                 <TouchableOpacity 
                     style={[styles.button, styles.confirmButton]}
-                    onPress={() => handleUpdateStatus(item.id, 'complete')}>
+                    onPress={() => handleUpdateStatus(item.id, 'delivery')}>
                     <Image source={require('../assets/correct.png')} style={{width: 22, height: 22}} />
                 </TouchableOpacity>
 
@@ -276,17 +282,30 @@ const Appointadmin = ({navigation}) => {
     );
 
     const filteredAppointments = appointments.filter(appointment => {
+        // First check if searching by ID
         if (searchId) {
             return appointment.id.toLowerCase().includes(searchId.toLowerCase());
         }
-        
+
+        // Then check date filter
         if (isFilteringByDate) {
             const appointmentDate = new Date(appointment.datetime);
             const filterDate = new Date(dateFilter);
             return appointmentDate.toDateString() === filterDate.toDateString();
         }
-        
-        return true;
+
+        // Then check completion status
+        if (filterCompleted !== null) {
+            if (filterCompleted) {
+                // Complete orders: state is complete AND appointment is paid
+                return appointment.state === 'complete' && appointment.appointment === 'paid';
+            } else {
+                // Incomplete orders: state is NOT complete OR appointment is NOT paid
+                return appointment.state !== 'complete' || appointment.appointment !== 'paid';
+            }
+        }
+
+        return true; // Show all appointments if no filters are active
     });
 
     const onDateChange = (event, selectedDate) => {
@@ -301,13 +320,25 @@ const Appointadmin = ({navigation}) => {
         setIsFilteringByDate(false);
         setShowDatePicker(false);
         setDateFilter(new Date());
+        setFilterCompleted(null); // Changed to null to indicate no completion filter
+        setSearchId('');
+    };
+
+    const handleFilterIncomplete = () => {
+        setFilterCompleted(false); // Set to false for incomplete orders
+        setIsFilteringByDate(false);
+    };
+
+    const handleFilterComplete = () => {
+        setFilterCompleted(true); // Set to true for complete orders
+        setIsFilteringByDate(false);
     };
 
     return (
         <View style={{flex:1, backgroundColor:"white"}}>
             <CustomModal />
             <View style={styles.header}>
-                <Text style={styles.headerText}>Khách hàng</Text>
+                <Text style={styles.headerText}>Đơn Hàng</Text>
             </View>
             
             <View style={styles.filterContainer}>
@@ -327,6 +358,39 @@ const Appointadmin = ({navigation}) => {
                         {dateFilter.toLocaleDateString('vi-VN')}
                     </Text>
                 </TouchableOpacity>
+            </View>
+
+            <View style={styles.filterButtonsContainer}>
+                <View style={styles.tabContainer}>
+                    <TouchableOpacity
+                        style={[
+                            styles.tabButton,
+                            filterCompleted === false && { backgroundColor: '#F44336' }
+                        ]}
+                        onPress={handleFilterIncomplete}
+                    >
+                        <View style={styles.tabContent}>
+                            <Text style={[
+                                styles.tabText,
+                                filterCompleted === false && styles.activeTabText
+                            ]}>Chưa hoàn thành</Text>
+                        </View>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                        style={[
+                            styles.tabButton,
+                            filterCompleted === true && { backgroundColor: '#4CAF50' }
+                        ]}
+                        onPress={handleFilterComplete}
+                    >
+                        <View style={styles.tabContent}>
+                            <Text style={[
+                                styles.tabText,
+                                filterCompleted === true && styles.activeTabText
+                            ]}>Đã hoàn thành</Text>
+                        </View>
+                    </TouchableOpacity>
+                </View>
             </View>
 
             {showDatePicker && (
@@ -565,6 +629,46 @@ const styles = StyleSheet.create({
         backgroundColor: 'white',
         borderRadius: 8,
         overflow: 'hidden',
+    },
+    filterButtonsContainer: {
+        paddingHorizontal: 16,
+        paddingVertical: 8,
+    },
+    tabContainer: {
+        flexDirection: 'row',
+        backgroundColor: '#F5F5F5',
+        borderRadius: 12,
+        padding: 4,
+    },
+    tabButton: {
+        flex: 1,
+        paddingVertical: 12,
+        borderRadius: 8,
+    },
+    activeTab: {
+        backgroundColor: '#FF9800',
+    },
+    tabContent: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 8,
+    },
+    tabIcon: {
+        width: 20,
+        height: 20,
+        tintColor: '#666',
+    },
+    activeIcon: {
+        tintColor: '#FFF',
+    },
+    tabText: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: '#666',
+    },
+    activeTabText: {
+        color: '#FFF',
     },
 });
 export default Appointadmin;

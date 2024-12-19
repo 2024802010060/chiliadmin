@@ -51,7 +51,7 @@ const Admin = () => {
         }}
       />
       
-      {userLogin.role !== 'user' && (
+      {(userLogin?.role !== 'user' && userLogin?.role !== null) && (
         <>
           <Tab.Screen
             name="Customers"

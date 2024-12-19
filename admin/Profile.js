@@ -12,15 +12,13 @@ const Profile = () => {
     const { userLogin } = controller;
     const navigation = useNavigation();
     
-    useEffect(() => {
-        if(userLogin == null)
-            navigation.navigate("Login")
-    }, [userLogin])
+    
 
     const handleLogout = async () => {
         try {
-            await signOut(auth);
+            signOut(auth);
             dispatch({ type: "LOGOUT" });
+            navigation.navigate("Login")
         } catch (error) {
             console.error("Lỗi đăng xuất:", error);
         }
