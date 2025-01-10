@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from "react";
-import { View, FlatList, TouchableOpacity, Alert, StyleSheet, ScrollView, Image } from "react-native";
+import { View, FlatList, TouchableOpacity, Alert, StyleSheet, ScrollView, Image, Modal } from "react-native";
 import { Text, TextInput, Button, Menu } from "react-native-paper";
 import { firestore } from '../firebaseconfig';
-import { collection, query, where, onSnapshot, doc, deleteDoc, updateDoc } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, doc, deleteDoc, updateDoc, getDoc } from 'firebase/firestore';
 import { useMyContextProvider } from "../index";
+import { getAuth, deleteUser } from 'firebase/auth';
 
 const Customers = () => {
     const [customers, setCustomers] = useState([]);
@@ -15,6 +16,9 @@ const Customers = () => {
     const [menuVisible, setMenuVisible] = useState(false);
     const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 });
     const [searchQuery, setSearchQuery] = useState('');
+    const [deleteModalVisible, setDeleteModalVisible] = useState(false);
+    const [customerToDelete, setCustomerToDelete] = useState(null);
+    const [isDeleting, setIsDeleting] = useState(false);
 
     const roles = ['user', 'customer'];
     
@@ -43,24 +47,42 @@ const Customers = () => {
     }, []);
 
     const handleDelete = (customerId) => {
-        Alert.alert(
-            "Cảnh báo",
-            "Bạn có chắc chắn muốn xóa khách hàng này?",
-            [
-                { text: "Hủy", style: "cancel" },
-                {
-                    text: "Xóa",
-                    onPress: async () => {
-                        try {
-                            await deleteDoc(doc(firestore, 'USERS', customerId));
-                            setSelectedCustomer(null);
-                        } catch (error) {
-                            console.error("Lỗi khi xóa khách hàng:", error);
-                        }
-                    }
+        setCustomerToDelete(customerId);
+        setDeleteModalVisible(true);
+    };
+
+    const confirmDelete = async () => {
+        try {
+            setIsDeleting(true);
+            
+            // Lấy thông tin user trước khi xóa
+            const customerDoc = await getDoc(doc(firestore, 'USERS', customerToDelete));
+            const customerData = customerDoc.data();
+            
+            // Xóa từ Firestore trước
+            await deleteDoc(doc(firestore, 'USERS', customerToDelete));
+            
+            // Xóa từ Authentication nếu có uid
+            if (customerData && customerData.uid) {
+                const auth = getAuth();
+                try {
+                    // Sử dụng Admin SDK hoặc Cloud Functions để xóa user
+                    // Vì client SDK không thể trực tiếp xóa user khác
+                    // Tạm thời bỏ qua phần xóa Authentication
+                    console.log("Cần xử lý xóa Authentication qua Admin SDK");
+                } catch (authError) {
+                    console.error("Lỗi khi xóa Authentication:", authError);
                 }
-            ]
-        );
+            }
+            
+            setSelectedCustomer(null);
+            setDeleteModalVisible(false);
+        } catch (error) {
+            console.error("Lỗi khi xóa khách hàng:", error);
+            Alert.alert("Lỗi", "Không thể xóa khách hàng. Vui lòng thử lại sau.");
+        } finally {
+            setIsDeleting(false);
+        }
     };
 
     const handleSave = async () => {
@@ -254,6 +276,37 @@ const Customers = () => {
             {editMode ? renderEditForm() : (
                 renderColumns()
             )}
+            
+            <Modal
+                visible={deleteModalVisible}
+                transparent={true}
+                animationType="fade"
+            >
+                <View style={styles.modalOverlay}>
+                    <View style={styles.modalContent}>
+                        <Text style={styles.modalTitle}>Cảnh báo</Text>
+                        <Text style={styles.modalMessage}>Bạn có chắc chắn muốn xóa khách hàng này?</Text>
+                        <View style={styles.modalButtons}>
+                            <Button 
+                                mode="outlined"
+                                onPress={() => setDeleteModalVisible(false)}
+                                disabled={isDeleting}
+                            >
+                                Hủy
+                            </Button>
+                            <Button 
+                                mode="contained"
+                                onPress={confirmDelete}
+                                buttonColor="#FF5252"
+                                disabled={isDeleting}
+                                loading={isDeleting}
+                            >
+                                {isDeleting ? 'Đang xóa...' : 'Xóa'}
+                            </Button>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
         </View>
     );
 }
@@ -414,6 +467,33 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         marginBottom: 10,
         color: '#424242',
+    },
+    modalOverlay: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    },
+    modalContent: {
+        backgroundColor: 'white',
+        borderRadius: 15,
+        padding: 20,
+        width: '80%',
+        maxWidth: 400,
+    },
+    modalTitle: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        marginBottom: 10,
+    },
+    modalMessage: {
+        fontSize: 16,
+        marginBottom: 20,
+    },
+    modalButtons: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        width: '100%',
     },
 });
 export default Customers;

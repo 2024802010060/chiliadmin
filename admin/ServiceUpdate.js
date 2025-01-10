@@ -3,7 +3,7 @@ import { View, Image, StyleSheet, TouchableOpacity, Alert, Modal, ActivityIndica
 import { Text, TextInput } from "react-native-paper";
 import { auth, firestore, storage } from '../firebaseconfig';
 import * as ImagePicker from 'expo-image-picker';
-import { doc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { doc, updateDoc, deleteDoc, collection, getDocs, query, where, addDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ScrollView } from "react-native-gesture-handler";
@@ -17,11 +17,75 @@ const ServiceUpdate = ({ route, navigation }) => {
     const [showSuccessModal, setShowSuccessModal] = useState(false);
     const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState(false);
     const [displayNumber, setDisplayNumber] = useState('0');
+    const [categories, setCategories] = useState([]);
+    const TYPE = collection(firestore, "Type");
+    const [type, setType] = useState(service.type);
+    const [isAddingType, setIsAddingType] = useState(false);
+    const [showErrorModal, setShowErrorModal] = useState(false);
+    const [errorMessage, setErrorMessage] = useState('');
+    const [showDeleteTypeModal, setShowDeleteTypeModal] = useState(false);
+    const [typeToDelete, setTypeToDelete] = useState(null);
 
     const handleDelete = (service) => {
         setShowDeleteConfirmModal(true);
     };
-    
+    // Thêm loại sản phẩm mới vào Firebase
+    const handleAddType = async (type) => {
+        if (!type) {
+            showError("Vui lòng nhập loại sản phẩm");
+            return;
+        }
+
+        setIsAddingType(true);
+        try {
+            // Check if type already exists
+            const querySnapshot = await getDocs(query(TYPE, where("type", "==", type)));
+            if (!querySnapshot.empty) {
+                showError("Loại sản phẩm này đã tồn tại");
+                return;
+            }
+
+            await addDoc(TYPE, { type });
+            await fetchCategories();
+            setType('');
+            Alert.alert("Thành công", "Đã thêm loại s��n phẩm mới");
+        } catch (error) {
+            console.error("Error adding type:", error);
+            Alert.alert("Lỗi", "Không thể thêm loại sản phẩm. Vui lòng thử lại.");
+        } finally {
+            setIsAddingType(false);
+        }
+    }
+    // Xóa loại sản phẩm
+    const handleMinusType = async (type) => {
+        if (!type) {
+            showError("Vui lòng chọn loại sản phẩm cần xóa");
+            return;
+        }
+        setTypeToDelete(type);
+        setShowDeleteTypeModal(true);
+    };
+
+    const handleConfirmTypeDelete = async () => {
+        setShowDeleteTypeModal(false);
+        setIsLoading(true);
+        
+        try {
+            const querySnapshot = await getDocs(query(TYPE, where("type", "==", typeToDelete)));
+            const deletePromises = querySnapshot.docs.map(doc => deleteDoc(doc.ref));
+            await Promise.all(deletePromises);
+            
+            setIsLoading(false);
+            await fetchCategories();
+            setType('');
+            Alert.alert("Thành công", "Đã xóa thể loại thành công");
+        } catch (error) {
+            setIsLoading(false);
+            console.error("Lỗi khi xóa thể loại:", error);
+            showError("Không thể xóa thể loại. Vui lòng thử lại.");
+        }
+    };
+
     const handleConfirmDelete = async () => {
         setShowDeleteConfirmModal(false);
         setIsLoading(true);
@@ -42,20 +106,24 @@ const ServiceUpdate = ({ route, navigation }) => {
     };
     const handleUpdateService = async () => {
         if (!title.trim()) {
-            Alert.alert("Lỗi", "Vui lòng nhập tên sản phẩm.");
+            showError("Vui lòng nhập tên sản phẩm.");
             return;
         }
         if (!price.trim()) {
-            Alert.alert("Lỗi", "Vui lòng nhập giá sản phẩm.");
+            showError("Vui lòng nhập giá sản phẩm.");
             return;
         }
-
+        if (!type.trim()) {
+            showError("Vui lòng chọn loại sản phẩm.");
+            return;
+        }
         setIsLoading(true);
         try {
             const serviceRef = doc(firestore, 'Services', service.id);
             await updateDoc(serviceRef, {
                 title: title,
-                price: price + '000'
+                price: price,
+                type: type
             });
 
             if (imagePath !== service.image) {
@@ -131,6 +199,21 @@ const ServiceUpdate = ({ route, navigation }) => {
         return () => clearInterval(timer);
     }, []); // Chỉ chạy một lần khi component mount
 
+    const fetchCategories = async () => {
+        const categorySnapshot = await getDocs(TYPE);
+        const categoryList = categorySnapshot.docs.map(doc => doc.data().type);
+        setCategories(categoryList);
+    };
+
+    useEffect(() => {
+        fetchCategories();
+    }, []);
+
+    const showError = (message) => {
+        setErrorMessage(message);
+        setShowErrorModal(true);
+    };
+
     return (
         <ScrollView style={styles.container}>
             <View style={styles.formContainer}>
@@ -151,11 +234,11 @@ const ServiceUpdate = ({ route, navigation }) => {
                             <Text style={styles.label}>Giá :</Text>
                             <TextInput
                                 placeholder="0"
-                                value={displayNumber}
+                                value={price}
                                 onChangeText={handlePriceChange}
                                 keyboardType="numeric"
                                 style={styles.textInput}
-                                right={<TextInput.Affix text=".000 VNĐ" />}
+                                right={<TextInput.Affix text=" VNĐ" />}
                                 placeholderTextColor="#999"
                             />
                         </View>
@@ -165,11 +248,42 @@ const ServiceUpdate = ({ route, navigation }) => {
                             <TextInput
                                 style={styles.textInput}
                                 placeholder="Loại sản phẩm"
-                                value={service.type}
-                                editable={false}
+                                value={type}
+                                
                                 placeholderTextColor="#999"
+                                onChangeText={setType}
                             />
                         </View>
+                        <View style={styles.existingCategories}>
+                    <View style={styles.categoryHeader}>
+                        <Text style={styles.label}>Loại sản phẩm hiện có :</Text>
+                        <View style={styles.categoryActions}>
+                            <TouchableOpacity onPress={() => handleAddType(type)}>
+                                <Image source={require('../assets/addgreen.png')} style={styles.actionIcon} />
+                            </TouchableOpacity>
+                            <TouchableOpacity onPress={() => handleMinusType(type)}>
+                                <Image source={require('../assets/minus.png')} style={styles.actionIcon} />
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                    
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoryList}>
+                        {categories.map((category, index) => (
+                            <TouchableOpacity 
+                                key={index} 
+                                style={[styles.categoryChip, setType === category && styles.selectedChip]} 
+                                onPress={() => {
+                                    setType(category);
+                                    
+                                }}
+                            >
+                                <Text style={[styles.categoryChipText, setType === category && styles.selectedChipText]}>
+                                    {category}
+                                </Text>
+                            </TouchableOpacity>
+                        ))}
+                    </ScrollView>
+                </View>
                     </View>
 
                     <View style={styles.rightColumn}>
@@ -285,6 +399,52 @@ const ServiceUpdate = ({ route, navigation }) => {
                     </View>
                 </View>
             </Modal>
+
+            <Modal
+                visible={showErrorModal}
+                transparent={true}
+                animationType="fade"
+            >
+                <View style={styles.modalContainer}>
+                    <View style={styles.modalContent}>
+                        <Text style={[styles.modalText, { color: '#f44336' }]}>{errorMessage}</Text>
+                        <TouchableOpacity
+                            style={[styles.modalButton, { backgroundColor: '#f44336' }]}
+                            onPress={() => setShowErrorModal(false)}
+                        >
+                            <Text style={styles.modalButtonText}>Đóng</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            </Modal>
+
+            <Modal
+                visible={showDeleteTypeModal}
+                transparent={true}
+                animationType="fade"
+            >
+                <View style={styles.modalContainer}>
+                    <View style={[styles.modalContent, { alignItems: 'center' }]}>
+                        <Text style={[styles.modalText, { textAlign: 'center' }]}>
+                            Bạn có chắc muốn xóa loại sản phẩm này?
+                        </Text>
+                        <View style={[styles.modalButtonRow, { justifyContent: 'center' }]}>
+                            <TouchableOpacity
+                                style={[styles.modalButton, styles.modalButtonCancel]}
+                                onPress={() => setShowDeleteTypeModal(false)}
+                            >
+                                <Text style={[styles.modalButtonText, { textAlign: 'center' }]}>Trở lại</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                style={[styles.modalButton, styles.modalButtonDelete]}
+                                onPress={handleConfirmTypeDelete}
+                            >
+                                <Text style={[styles.modalButtonText, { textAlign: 'center' }]}>Xóa</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
         </ScrollView>
     );
 }
@@ -381,18 +541,22 @@ const styles = StyleSheet.create({
     buttonRow: {
         flexDirection: 'row',
         justifyContent: 'center',
+        alignItems: 'center',
         gap: 20,
         width: '100%',
         maxWidth: 800,
     },
     submitButton: {
         marginTop: 20,
+        flex: 1,
+        maxWidth: 200,
     },
     submitGradient: {
         padding: 15,
         borderRadius: 8,
         width: '100%',
         alignItems: 'center',
+        justifyContent: 'center',
     },
     submitText: {
         color: '#fff',
@@ -422,15 +586,15 @@ const styles = StyleSheet.create({
         flex: 1,
         padding: 12,
         borderRadius: 5,
-        maxWidth: 150,
+        maxWidth: 120,
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: '#4CAF50',
     },
     modalButtonText: {
         color: '#fff',
-        fontSize: 18,
+        fontSize: 16,
         fontWeight: 'bold',
+        textAlign: 'center',
     },
     loadingContent: {
         backgroundColor: '#fff',
@@ -445,15 +609,58 @@ const styles = StyleSheet.create({
     },
     modalButtonRow: {
         flexDirection: 'row',
+        justifyContent: 'center',
         width: '100%',
         gap: 10,
         marginTop: 10,
+        paddingHorizontal: 20,
     },
     modalButtonCancel: {
         backgroundColor: '#757575',
     },
     modalButtonDelete: {
         backgroundColor: '#f44336',
+    },
+    actionIcon: {
+        width: 20,
+        height: 20,
+        alignSelf: 'center',
+    },
+    categoryHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 10,
+        gap: 10,
+    },
+    categoryActions: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 10,
+        height: 24,
+    },
+    actionIcon: {
+        width: 20,
+        height: 20,
+        alignSelf: 'center',
+    },
+    categoryList: {
+        marginTop: 10,
+    },
+    categoryChip: {
+        paddingHorizontal: 15,
+        paddingVertical: 8,
+        backgroundColor: '#f0f0f0',
+        borderRadius: 20,
+        marginRight: 10,
+    },
+    selectedChip: {
+        backgroundColor: '#FFB75E',
+    },
+    categoryChipText: {
+        color: '#333',
+    },
+    selectedChipText: {
+        color: '#fff',
     },
 })
 export default ServiceUpdate;

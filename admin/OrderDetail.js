@@ -90,7 +90,7 @@ const OrderDetail = ({ route, navigation }) => {
                             mode="contained" 
                             onPress={() => {
                                 setShowSuccessModal(false);
-                                navigation.navigate("PaymentZalo", { orderId: orderData.id });
+                                
                             }}
                             style={styles.successModalButton}
                             labelStyle={styles.successModalButtonLabel}
